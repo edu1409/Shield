@@ -3,7 +3,7 @@ using Shield.Common.Interfaces;
 using Shield.Common.Services;
 using Shield.Hd44780;
 using Shield.Logger;
-using Shield.Utils.BME280;
+using Shield.Bme280;
 
 namespace Shield.Display
 {

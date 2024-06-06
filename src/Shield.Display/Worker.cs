@@ -10,7 +10,6 @@ namespace Shield.Display
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            //Mutex? mutex = null;
             int climateWait = 0, retries = 0;
 
             _logger.LogInformation(Constants.SERVICE_STARTED);

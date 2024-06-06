@@ -1,4 +1,4 @@
-﻿using Iot.Device.Bmxx80;
+﻿using Sensor = Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -6,17 +6,17 @@ using Shield.Common.Domain;
 using Shield.Common.Interfaces;
 using System.Device.I2c;
 
-namespace Shield.Utils.BME280
+namespace Shield.Bme280
 {
     public class Bme280Service : IClimateSensorService
     {
         private readonly ILogger<Bme280Service> _logger;
-        private readonly Bme280 _sensor;
+        private readonly Sensor.Bme280 _sensor;
 
         public Bme280Service(ILogger<Bme280Service> logger, IOptions<ClimateSensorOptions> sensorOptions)
         {
             _logger = logger;
-            _sensor = new Bme280(I2cDevice.Create(
+            _sensor = new Sensor.Bme280(I2cDevice.Create(
                 new I2cConnectionSettings(sensorOptions.Value.I2cBusId, sensorOptions.Value.I2cAddress)));
             _sensor.SetPowerMode(Bmx280PowerMode.Forced);
         }
