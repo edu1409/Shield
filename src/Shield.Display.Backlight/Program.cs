@@ -74,17 +74,12 @@ namespace Shield.Display.Backlight
             }
 
             var client = _serviceProvider.GetService<IIpcServiceClient>();
-            //var logger = _serviceProvider.GetService<ILogger<Program>>()!;
-
             var result = client!.SendMessage(lcd, DisplayBacklightStatus.None, false);
-
-            var currentStatus = result!.Status;
             string message = string.Empty;
 
-            if (cmd == Command.on || cmd == Command.off) message = ChangeBacklightStatus(cmd, lcd, currentStatus);
-            else if (cmd == Command.reset) message = ResetBacklightStatus(lcd, currentStatus);
+            if (cmd == Command.on || cmd == Command.off) message = ChangeBacklightStatus(cmd, lcd, result!.Status);
+            else if (cmd == Command.reset) message = ResetBacklightStatus(lcd, result!.Status);
 
-            //logger.LogInformation(message);
             Console.WriteLine(message);
         }
 
@@ -165,13 +160,6 @@ namespace Shield.Display.Backlight
                 .Configure<SharedMemoryOptions>(options => options.Source = SharedMemorySource.Command)
                 .AddSingleton<ISharedMemoryService, SharedMemoryService>()
                 .AddSingleton<IIpcServiceClient, IpcServiceClient>();
- 
-                //services.AddLogging(loggingBuilder =>
-                //{
-                //    loggingBuilder.ClearProviders();
-                //    loggingBuilder.AddFileLoggerProvider();
-                //    loggingBuilder.SetMinimumLevel(LogLevel.Information);
-                //});
 
             return services.BuildServiceProvider();
         }

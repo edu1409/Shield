@@ -47,7 +47,9 @@ namespace Shield.Display.Services
                     }
                 }
 
-                SendResponseToClient(stream, receivedMessage!);
+                //send response to client
+                var msg = Encoding.UTF8.GetBytes(receivedMessage!.Serialize());
+                stream.Write(msg, 0, msg.Length);
             }
             finally
             {
@@ -107,12 +109,6 @@ namespace Shield.Display.Services
                 _logger.LogError(ex, message);
                 serviceMessage.Exception = new ApplicationException(message, ex);
             }
-        }
-
-        private void SendResponseToClient(NetworkStream stream, IpcMessage message)
-        {
-            var msg = Encoding.UTF8.GetBytes(message.Serialize());
-            stream.Write(msg, 0, msg.Length);
         }
     }
 }

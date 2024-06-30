@@ -9,7 +9,7 @@ namespace Shield.Common.Services
     public class SharedMemoryService : ISharedMemoryService
     {
         private static readonly string _filePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, Constants.SHARED_MEMORY_FILE);
-        private MemoryMappedFile? _sharedMemory;
+        private readonly MemoryMappedFile? _sharedMemory;
 
         public SharedMemoryService(IOptions<SharedMemoryOptions> options)
         {
