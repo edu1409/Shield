@@ -1,55 +1,61 @@
 using Shield.Common.Domain;
+using Shield.Display.Services;
+using System.Device.Gpio;
 
 namespace Shield.Display
 {
-    public class Worker(ILogger<Worker> logger,
-        IDisplayWorker displayWorker) : BackgroundService
+    public sealed class Worker(ILogger<Worker> logger,
+        IPrimaryDisplayWorker primaryDisplayWorker,
+        ISecondaryDisplayWorker secondaryDisplayWorker,
+        IIpcServiceServer ipcServiceServer) : BackgroundService
     {
         private readonly ILogger<Worker> _logger = logger;
-        private readonly IDisplayWorker _displayWorker = displayWorker;
+        private readonly IPrimaryDisplayWorker _primaryDisplayWorker = primaryDisplayWorker;
+        private readonly ISecondaryDisplayWorker _secondaryDisplayWorker = secondaryDisplayWorker;
+        private readonly IIpcServiceServer _ipcServiceServer = ipcServiceServer;
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            int climateWait = 0, retries = 0;
+            Led(true);
 
+            _ipcServiceServer.Start();
+
+            await base.StartAsync(cancellationToken);
+        }
+
+        public override async Task StopAsync(CancellationToken cancellationToken)
+        {
+            Led(false);
+
+            await base.StopAsync(cancellationToken);
+        }
+
+        public override void Dispose()
+        {
+            Led(false);
+            
+            base.Dispose();
+        }
+
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        {
             _logger.LogInformation(Constants.SERVICE_STARTED);
 
-            await _displayWorker.WelcomeAsync(stoppingToken);
+            var taskPrimaryDisplay = Task.Run(() => _primaryDisplayWorker.Execute(), stoppingToken);
+            var taskSecondaryDisplay = Task.Run(() => _secondaryDisplayWorker.Execute(), stoppingToken);
 
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                try
-                {
-                    //Block process to control possible concurrency with Shield.Display.Backline execution
-                    using (var mutex = Program.StartMutex())
-                    {
-                        _displayWorker.UpdateTime();
+            Task.WaitAll([taskPrimaryDisplay, taskSecondaryDisplay], cancellationToken: stoppingToken);
 
-                        //Update climate information each 15 minutes
-                        if (climateWait % 15 == 0)
-                        {
-                            _displayWorker.UpdateClimateInformationAsync(stoppingToken).Wait(stoppingToken);
-                            climateWait = 0;
-                        }
+            return Task.CompletedTask;
+        }
 
-                        _displayWorker.ControlBacklightSchedule();
+        private static void Led(bool on)
+        {
+            int pin = 17;
+            using var controller = new GpioController();
+            controller.OpenPin(pin, PinMode.Output);
 
-                        mutex.ReleaseMutex();
-                    }
-
-                    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
-
-                    retries = 0;
-                    climateWait++;
-                }
-                catch (Exception ex)
-                {
-                    _displayWorker.FatalError(ex);
-                    retries++;
-                    //Ends application after 3 consecutive exceptions
-                    if (retries > 3) throw;
-                }
-            }
+            controller.Write(pin, on ? PinValue.High : PinValue.Low);
         }
     }
 }

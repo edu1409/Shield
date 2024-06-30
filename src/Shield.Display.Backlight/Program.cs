@@ -4,9 +4,8 @@ using Microsoft.Extensions.Logging;
 using Shield.Common.Domain;
 using Shield.Common.Interfaces;
 using Shield.Common.Services;
-using Shield.Hd44780;
+using Shield.Display.Backlight.Services;
 using Shield.Logger;
-using Shield.Bme280;
 using System.Text;
 
 namespace Shield.Display.Backlight
@@ -14,8 +13,6 @@ namespace Shield.Display.Backlight
     internal class Program
     {
         private static readonly ServiceProvider _serviceProvider = ConfigureServices();
-
-        private static IBacklightService? _backlightService;
         
         private enum Command
         {
@@ -27,12 +24,48 @@ namespace Shield.Display.Backlight
         
         static void Main(string[] args)
         {
-            if (args.Length == 0) Console.WriteLine("No command specified. Use 'shdbl help' to get help.");
-            else if (Enum.TryParse(args[0], out Command cmd)) Execute(cmd);
-            else Console.WriteLine($"Invalid command '{args[0]}'. Use 'shdbl help' to get help.");
+
+            if (args.Length == 0)
+            {
+                Console.WriteLine("No parameters specified. Use 'shdbl help' to get help.");
+            }
+            else 
+            {
+                if (Enum.TryParse(args[0], out Command cmd))
+                {
+                    if (cmd == Command.help)
+                    {
+                        ShowHelp();
+                    }
+                    else
+                    {
+                        if (args.Length < 2)
+                        {
+                            Console.WriteLine("Invalid parameters. Use 'shdbl help' to get help.");
+                        }
+                        else
+                        {
+                            var command = char.ToUpper(args[1][0]) + args[1][1..].ToLower();
+                            
+                            if (Enum.TryParse(command, out Lcd lcd))
+                            {
+                                Execute(cmd, lcd);
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Invalid display '{args[1]}'. Use 'shdbl help' to get help.");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Invalid command '{args[0]}'. Use 'shdbl help' to get help.");
+                }
+            }
         }
 
-        private static void Execute(Command cmd)
+        private static void Execute(Command cmd, Lcd lcd)
         {
             if (cmd == Command.help)
             {
@@ -40,29 +73,25 @@ namespace Shield.Display.Backlight
                 return;
             }
 
-            using var mutex = Display.Program.StartMutex();
-
             ISharedMemoryService sharedMemory = _serviceProvider.GetService<ISharedMemoryService>()!;
             ILogger<Program> logger = _serviceProvider.GetService<ILogger<Program>>()!;
 
-            var currentStatus = sharedMemory!.Read();
+            var currentStatus = sharedMemory!.Read(lcd);
             string message = string.Empty;
 
-            if (cmd == Command.on || cmd == Command.off) message = ChangeBacklightStatus(cmd, currentStatus);
-            else if (cmd == Command.reset) message = ResetBacklightStatus(currentStatus);
+            if (cmd == Command.on || cmd == Command.off) message = ChangeBacklightStatus(cmd, lcd, currentStatus);
+            else if (cmd == Command.reset) message = ResetBacklightStatus(lcd, currentStatus);
 
             logger.LogInformation(message);
             Console.WriteLine(message);
-
-            mutex.ReleaseMutex();
         }
 
         /// <summary>
         /// Check if user's command is changing the current backlight status or not
         /// </summary>
-        private static string ChangeBacklightStatus(Command cmd, DisplayBacklightStatus currentStatus)
+        private static string ChangeBacklightStatus(Command cmd, Lcd lcd, DisplayBacklightStatus currentStatus)
         {
-            string? message = Constants.BACKLIGHT_MANUAL_NOCHANGE;
+            string? resultMessage = $"{lcd} {Constants.BACKLIGHT_MANUAL_NOCHANGE}";
 
             var newStatus = cmd == Command.on ? DisplayBacklightStatus.OnByManual : DisplayBacklightStatus.OffByManual;
 
@@ -72,30 +101,30 @@ namespace Shield.Display.Backlight
                 ((currentStatus == DisplayBacklightStatus.OffByService || currentStatus == DisplayBacklightStatus.OffByManual)
                 && newStatus == DisplayBacklightStatus.OffByManual)))
             {
-                _backlightService = _serviceProvider.GetService<IBacklightService>()!;
-                _backlightService.ControlDisplayBacklightAsync(newStatus).Wait();
+                var client = _serviceProvider.GetService<IIpcServiceClient>();
+                client!.SendMessage(lcd, newStatus);
 
-                message = string.Format(Constants.BACKLIGHT_MANUAL_CHANGE, newStatus == DisplayBacklightStatus.OnByManual ? "ON" : "OFF");
+                resultMessage = string.Format(Constants.BACKLIGHT_MANUAL_CHANGE, lcd.ToString(), newStatus == DisplayBacklightStatus.OnByManual ? "ON" : "OFF");
             }
 
-            return message;
+            return resultMessage;
         }
 
         /// <summary>
         /// Returns display backlight control to automatic.
         /// </summary>
-        private static string ResetBacklightStatus(DisplayBacklightStatus currentStatus)
+        private static string ResetBacklightStatus(Lcd lcd, DisplayBacklightStatus currentStatus)
         {
-            var message = Constants.BACKLIGHT_MANUAL_NOCHANGE;
+            var message = $"{lcd} {Constants.BACKLIGHT_MANUAL_NOCHANGE}";
 
             //reset only executes if current control is manual
             if (currentStatus != DisplayBacklightStatus.OnByService
                 && currentStatus != DisplayBacklightStatus.OffByService)
             {
-                _backlightService = _serviceProvider.GetService<IBacklightService>()!;
-                _backlightService.ResetControlAsync().Wait();
+                var client = _serviceProvider.GetService<IIpcServiceClient>();
+                client!.SendMessage(lcd, currentStatus, true);
 
-                message = Constants.BACKLIGHT_BACK_AUTOMATIC;
+                message = $"{lcd} {Constants.BACKLIGHT_BACK_AUTOMATIC}";
             }
 
             return message;
@@ -105,13 +134,15 @@ namespace Shield.Display.Backlight
         {
             var message = new StringBuilder();
 
-            message.Append($"\n\rUsage: shieldbacklight [command]");
+            message.Append($"\n\rUsage: shdb [command] [display]");
             message.Append("\n\n\rTurns display backlight ON or OFF.");
-            message.Append("\n\n\rCommands:");
-            message.Append("\n\r\ton\tSet display backlight ON.");
-            message.Append("\n\r\toff\tSet display backlight OFF.");
-            message.Append("\n\r\treset\tReturns display backlight control to automatic.");
-            message.Append("\n\r\thelp\tShow command line help.\n\r");
+            message.Append("\n\n\r[command]");
+            message.Append("\n\r\ton\t\tSet display backlight ON.");
+            message.Append("\n\r\toff\t\tSet display backlight OFF.");
+            message.Append("\n\r\treset\t\tReturns display backlight control to automatic.");
+            message.Append("\n\n\r[display]");
+            message.Append("\n\r\tprimary\t\tFor primary display.");
+            message.Append("\n\r\tsecondary\tFor secondary display.\n\r");
 
             Console.WriteLine(message.ToString());
         }
@@ -129,14 +160,9 @@ namespace Shield.Display.Backlight
 
             var services = new ServiceCollection();
             services.AddOptions()
-                .AddSingleton<IBacklightService, BacklightService>()
-                .AddSingleton<IDisplayWorker, DisplayWorker>()
-                .AddSingleton<IDisplayService, Hd44780Service>()
-                .AddSingleton<IClimateSensorService, Bme280Service>()
+                .Configure<SharedMemoryOptions>(options => options.Source = SharedMemorySource.Command)
                 .AddSingleton<ISharedMemoryService, SharedMemoryService>()
-                .Configure<DisplayOptions>(config.GetSection(nameof(DisplayOptions)))
-                .Configure<ClimateSensorOptions>(config.GetSection(nameof(ClimateSensorOptions)))
-                .Configure<SharedMemoryOptions>(options => options.Source = SharedMemorySource.Client);
+                .AddSingleton<IIpcServiceClient, IpcServiceClient>();
 
                 services.AddLogging(loggingBuilder =>
                 {

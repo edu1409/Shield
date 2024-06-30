@@ -3,9 +3,11 @@ using System.Reflection;
 
 namespace Shield.Logger
 {
-    public class FileLoggerProvider : ILoggerProvider
+    public sealed class FileLoggerProvider : ILoggerProvider
     {
         private readonly string _logDirectory;
+
+        private FileLogger? _logger;
 
         public FileLoggerProvider()
         {
@@ -16,12 +18,13 @@ namespace Shield.Logger
 
         public ILogger CreateLogger(string categoryName)
         {
-            return new FileLogger(_logDirectory);
+            _logger = new FileLogger(_logDirectory);
+            return _logger;
         }
 
         public void Dispose()
         {
-            GC.SuppressFinalize(this);
+            _logger = null;
         }
     }
 }

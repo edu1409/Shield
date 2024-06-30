@@ -2,7 +2,7 @@
 {
     public enum SharedMemorySource
     {
-        Client,
-        Server
+        Startup,
+        Command
     }
 }

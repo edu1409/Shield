@@ -8,50 +8,43 @@ namespace Shield.Common.Services
 {
     public class SharedMemoryService : ISharedMemoryService
     {
-        private readonly MemoryMappedFile _sharedMemory;
+        private static readonly string _filePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, Constants.SHARED_MEMORY_FILE);
+        private MemoryMappedFile? _sharedMemory;
 
         public SharedMemoryService(IOptions<SharedMemoryOptions> options)
         {
-            FileMode fileMode;
-            var filePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, Constants.SHARED_MEMORY_FILE);
+            FileStream file;
 
             switch (options.Value.Source)
             {
-                case SharedMemorySource.Server:
-                    if (File.Exists(filePath)) File.Delete(filePath);
-                    fileMode = FileMode.CreateNew;
+                case SharedMemorySource.Startup:
+                    if (File.Exists(_filePath)) File.Delete(_filePath);
+                    file = File.Open(_filePath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite);
                     break;
-                case SharedMemorySource.Client:
-                    fileMode = FileMode.Open;
+                case SharedMemorySource.Command:
+                    file = File.Open(_filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
                     break;
                 default:
                     throw new ArgumentException(Constants.SHARED_MEMORY_INVALID_SOURCE);
             }
 
             //Set MemoryMappedFile
-            var file = File.Open(filePath, fileMode, FileAccess.ReadWrite, FileShare.ReadWrite);
-            _sharedMemory = MemoryMappedFile.CreateFromFile(file, null, 1,
+            _sharedMemory ??= MemoryMappedFile.CreateFromFile(file, null, 64,
                 MemoryMappedFileAccess.ReadWriteExecute, HandleInheritability.Inheritable, false);
         }
 
-        public void Write(DisplayBacklightStatus value)
+        public void Write(DisplayBacklightStatus value, Lcd display)
         {
-            using var stream = _sharedMemory.CreateViewStream();
-            var writer = new BinaryWriter(stream);
-            writer.Write((byte)value);
+            using var acessor = _sharedMemory?.CreateViewAccessor((int)display, 1, MemoryMappedFileAccess.Write);
+            acessor!.Write(0, (byte)value);
         }
 
-        public DisplayBacklightStatus Read()
+        public DisplayBacklightStatus Read(Lcd display)
         {
-            DisplayBacklightStatus result;
+            using var acessor = _sharedMemory?.CreateViewAccessor((int)display, 1, MemoryMappedFileAccess.Read);
+            acessor!.Read(0, out byte status);
 
-            using (MemoryMappedViewStream stream = _sharedMemory.CreateViewStream())
-            {
-                var reader = new BinaryReader(stream);
-                result = (DisplayBacklightStatus)reader.ReadByte();
-            }
-
-            return result;
+            return (DisplayBacklightStatus)status;
         }
     }
 }

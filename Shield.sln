@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shield.Display", "src\Shiel
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shield.Display.Backlight", "src\Shield.Display.Backlight\Shield.Display.Backlight.csproj", "{48C526B7-A7CE-4DCC-ADE0-0FF18C424FAF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shield.Hd44780", "src\Shield.Hd44780\Shield.Hd44780.csproj", "{9247D5F8-69D8-4AFE-A80D-1496820B0994}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shield.Lcd", "src\Shield.Lcd\Shield.Lcd.csproj", "{9247D5F8-69D8-4AFE-A80D-1496820B0994}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shield.Logger", "src\Shield.Logger\Shield.Logger.csproj", "{745E773A-3E2E-4F73-94A0-25A2FB51F76E}"
 EndProject

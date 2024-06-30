@@ -6,7 +6,7 @@ namespace Shield.Logger
     {
         private string _currentFilePath;
         private readonly string _logDirectory;
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
         private DateTime _currentDate;
 
         public FileLogger(string logDirectory)
@@ -26,8 +26,15 @@ namespace Shield.Logger
             {
                 return;
             }
+            
+            // Use the formatter to create the log message
+            var message = formatter(state, exception);
 
-            var logRecord = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{logLevel}] {formatter(state, exception)}";
+            // Include exception details if present
+            if (exception != null) message += Environment.NewLine + exception.ToString();
+
+            var logRecord = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{logLevel}] {message}";
+
             lock (_lock)
             {
                 CheckForNewDay();

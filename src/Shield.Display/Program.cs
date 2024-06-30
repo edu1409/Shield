@@ -1,9 +1,10 @@
+using Shield.Bme280;
 using Shield.Common.Domain;
 using Shield.Common.Interfaces;
 using Shield.Common.Services;
-using Shield.Hd44780;
+using Shield.Display.Services;
+using Shield.Lcd;
 using Shield.Logger;
-using Shield.Bme280;
 
 namespace Shield.Display
 {
@@ -14,13 +15,16 @@ namespace Shield.Display
             var builder = Host.CreateApplicationBuilder(args);
 
             builder.Services.AddHostedService<Worker>()
-                .AddSingleton<IDisplayWorker, DisplayWorker>()
-                .AddSingleton<IDisplayService, Hd44780Service>()
+                .AddSingleton<IPrimaryDisplayWorker, PrimaryDisplayWorker>()
+                .AddSingleton<ISecondaryDisplayWorker, SecondaryDisplayWorker>()
+                .AddSingleton<IDisplayService<Lcd20x4>, Lcd20x4>()
+                .AddSingleton<IDisplayService<Lcd16x2>, Lcd16x2>()
                 .AddSingleton<IClimateSensorService, Bme280Service>()
                 .AddSingleton<ISharedMemoryService, SharedMemoryService>()
+                .AddSingleton<IIpcServiceServer, IpcServiceServer>()
                 .Configure<DisplayOptions>(builder.Configuration.GetSection(nameof(DisplayOptions)))
                 .Configure<ClimateSensorOptions>(builder.Configuration.GetSection(nameof(ClimateSensorOptions)))
-                .Configure<SharedMemoryOptions>(options => options.Source = SharedMemorySource.Server);
+                .Configure<SharedMemoryOptions>(options => options.Source = SharedMemorySource.Startup);
             
             builder.Services.AddLogging(loggingBuilder =>
             {
@@ -31,28 +35,6 @@ namespace Shield.Display
 
             var host = builder.Build();
             host.Run();
-        }
-
-        /// <summary>
-        /// Gets or create <see cref="Mutex"/> to avoid concurrency between 
-        /// <see cref="Shield.Display.Worker"/> and Shield.Display.Backlight.Program .
-        /// </summary>
-        public static Mutex StartMutex()
-        {
-            Mutex mutex;
-
-            try
-            {
-                mutex = Mutex.OpenExisting(Constants.SERVICE_MUTEX);
-            }
-            catch (WaitHandleCannotBeOpenedException)
-            {
-                mutex = new Mutex(false, Constants.SERVICE_MUTEX);
-            }
-
-            mutex.WaitOne();
-
-            return mutex;
         }
     }
 }

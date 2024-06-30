@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -14,6 +14,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shield.BME280\Shield.Bme280.csproj" />
-    <ProjectReference Include="..\Shield.Hd44780\Shield.Hd44780.csproj" />
+    <ProjectReference Include="..\Shield.Lcd\Shield.Lcd.csproj" />
   </ItemGroup>
 </Project>
