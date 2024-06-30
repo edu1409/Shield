@@ -2,6 +2,7 @@
 {
     public enum DisplayBacklightStatus
     {
+        None = 0,
         OnByService,
         OffByService,
         OnByManual,

@@ -73,16 +73,18 @@ namespace Shield.Display.Backlight
                 return;
             }
 
-            ISharedMemoryService sharedMemory = _serviceProvider.GetService<ISharedMemoryService>()!;
-            ILogger<Program> logger = _serviceProvider.GetService<ILogger<Program>>()!;
+            var client = _serviceProvider.GetService<IIpcServiceClient>();
+            //var logger = _serviceProvider.GetService<ILogger<Program>>()!;
 
-            var currentStatus = sharedMemory!.Read(lcd);
+            var result = client!.SendMessage(lcd, DisplayBacklightStatus.None, false);
+
+            var currentStatus = result!.Status;
             string message = string.Empty;
 
             if (cmd == Command.on || cmd == Command.off) message = ChangeBacklightStatus(cmd, lcd, currentStatus);
             else if (cmd == Command.reset) message = ResetBacklightStatus(lcd, currentStatus);
 
-            logger.LogInformation(message);
+            //logger.LogInformation(message);
             Console.WriteLine(message);
         }
 
@@ -115,7 +117,7 @@ namespace Shield.Display.Backlight
         /// </summary>
         private static string ResetBacklightStatus(Lcd lcd, DisplayBacklightStatus currentStatus)
         {
-            var message = $"{lcd} {Constants.BACKLIGHT_MANUAL_NOCHANGE}";
+            var resultMessage = $"{lcd} {Constants.BACKLIGHT_MANUAL_NOCHANGE}";
 
             //reset only executes if current control is manual
             if (currentStatus != DisplayBacklightStatus.OnByService
@@ -124,10 +126,10 @@ namespace Shield.Display.Backlight
                 var client = _serviceProvider.GetService<IIpcServiceClient>();
                 client!.SendMessage(lcd, currentStatus, true);
 
-                message = $"{lcd} {Constants.BACKLIGHT_BACK_AUTOMATIC}";
+                resultMessage = $"{lcd} {Constants.BACKLIGHT_BACK_AUTOMATIC}";
             }
 
-            return message;
+            return resultMessage;
         }
 
         private static void ShowHelp()
@@ -163,13 +165,13 @@ namespace Shield.Display.Backlight
                 .Configure<SharedMemoryOptions>(options => options.Source = SharedMemorySource.Command)
                 .AddSingleton<ISharedMemoryService, SharedMemoryService>()
                 .AddSingleton<IIpcServiceClient, IpcServiceClient>();
-
-                services.AddLogging(loggingBuilder =>
-                {
-                    loggingBuilder.ClearProviders();
-                    loggingBuilder.AddFileLoggerProvider();
-                    loggingBuilder.SetMinimumLevel(LogLevel.Information);
-                });
+ 
+                //services.AddLogging(loggingBuilder =>
+                //{
+                //    loggingBuilder.ClearProviders();
+                //    loggingBuilder.AddFileLoggerProvider();
+                //    loggingBuilder.SetMinimumLevel(LogLevel.Information);
+                //});
 
             return services.BuildServiceProvider();
         }

@@ -4,6 +4,6 @@ namespace Shield.Display.Backlight.Services
 {
     public interface IIpcServiceClient 
     {
-        void SendMessage(Lcd lcd, DisplayBacklightStatus status, bool reset = false);
+        IpcMessage? SendMessage(Lcd lcd, DisplayBacklightStatus status, bool reset = false);
     }
 }
