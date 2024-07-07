@@ -6,6 +6,14 @@ using System.Reflection;
 
 namespace Shield.Common.Services
 {
+    /**************** Memory Map ****************
+     * byte#               function             *
+     *  1       ServiceStatus of Lcd.Primary    *
+     *  2       ServiceStatus of Lcd.Secondary  *
+     *  3       ServiceStatus of Fan.In         *
+     *  4       ServiceStatus of Fan1.Out       *
+     *******************************************/
+
     public class SharedMemoryService : ISharedMemoryService
     {
         private static readonly string _filePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, Constants.SHARED_MEMORY_FILE);
@@ -29,22 +37,22 @@ namespace Shield.Common.Services
             }
 
             //Set MemoryMappedFile
-            _sharedMemory ??= MemoryMappedFile.CreateFromFile(file, null, 64,
+            _sharedMemory ??= MemoryMappedFile.CreateFromFile(file, null, 16,
                 MemoryMappedFileAccess.ReadWriteExecute, HandleInheritability.Inheritable, false);
         }
 
-        public void Write(DisplayBacklightStatus value, Lcd display)
+        public void Write(SharedMemoryByte offset, ServiceStatus serviceStatus)
         {
-            using var acessor = _sharedMemory?.CreateViewAccessor((int)display, 1, MemoryMappedFileAccess.Write);
-            acessor!.Write(0, (byte)value);
+            using var acessor = _sharedMemory?.CreateViewAccessor((int)offset, 1, MemoryMappedFileAccess.Write);
+            acessor!.Write(0, (byte)serviceStatus);
         }
 
-        public DisplayBacklightStatus Read(Lcd display)
+        public ServiceStatus Read(SharedMemoryByte serviceStatus)
         {
-            using var acessor = _sharedMemory?.CreateViewAccessor((int)display, 1, MemoryMappedFileAccess.Read);
+            using var acessor = _sharedMemory?.CreateViewAccessor((int)serviceStatus, 1, MemoryMappedFileAccess.Read);
             acessor!.Read(0, out byte status);
 
-            return (DisplayBacklightStatus)status;
+            return (ServiceStatus)status;
         }
     }
 }

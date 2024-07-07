@@ -1,6 +1,6 @@
 ﻿namespace Shield.Common.Domain
 {
-    public enum DisplayBacklightStatus
+    public enum ServiceStatus
     {
         None = 0,
         OnByService,

@@ -8,6 +8,7 @@ using System.Device.I2c;
 
 namespace Shield.Bme280
 {
+    //Control the Bme280 sensor
     public class Bme280Service : IClimateSensorService
     {
         private readonly ILogger<Bme280Service> _logger;
@@ -21,6 +22,7 @@ namespace Shield.Bme280
             _sensor.SetPowerMode(Bmx280PowerMode.Forced);
         }
 
+        //Read temperature and relative humidity
         public async Task<ClimateSensorReading> ReadAsync(CancellationToken cancellationToken = default)
         {
             ClimateSensorReading sensorReading;

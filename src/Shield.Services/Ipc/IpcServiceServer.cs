@@ -1,23 +1,29 @@
 ﻿using Shield.Common.Domain;
 using Shield.Common.Interfaces;
+using Shield.Services.Display;
+using Shield.Services.Fan;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace Shield.Display.Services
+namespace Shield.Services.Ipc
 {
     public class IpcServiceServer(ILogger<IpcServiceServer> logger,
         IPrimaryDisplayWorker primaryDisplayWorker,
         ISecondaryDisplayWorker secondaryDisplayWorker,
+        IIntakeFanWorker intakeFanWorker,
+        IExhaustFanWorker exhaustFanWorker,
         ISharedMemoryService sharedMemoryService) : IIpcServiceServer
     {
         private readonly TcpListener _listener = new(IPAddress.Any, Constants.IPC_PORT);
         private readonly ILogger<IpcServiceServer> _logger = logger;
         private readonly IPrimaryDisplayWorker _primaryDisplayWorker = primaryDisplayWorker;
         private readonly ISecondaryDisplayWorker _secondaryDisplayWorker = secondaryDisplayWorker;
+        private readonly IIntakeFanWorker _intakeFanWorker = intakeFanWorker;
+        private readonly IExhaustFanWorker _exhaustFanWorker = exhaustFanWorker;
         private readonly ISharedMemoryService _sharedMemoryService = sharedMemoryService;
 
-        public void Start()
+        public void Execute()
         {
             _listener.Start();
             _listener.BeginAcceptTcpClient(ClientCallback, null);
@@ -33,17 +39,23 @@ namespace Shield.Display.Services
             {
                 using var stream = client.GetStream();
                 var receivedMessage = ReceiveMessage(stream);
-                
-                //Action to do according parameters (actualy Exception and DisplayBacklightStatus.None
+
+                //Action to do according parameters (Exception and ServiceStatus.None)
                 if (receivedMessage?.Exception is null) //No exception
                 {
-                    if (receivedMessage?.Status == DisplayBacklightStatus.None) //read current display status
+                    if (receivedMessage is IpcFanMessage fanMessage)
                     {
-                        receivedMessage.Status = _sharedMemoryService.Read(receivedMessage.Lcd);
+                        var worker = GetWorkerService(fanMessage.MemoryByte);
+                        
+                        if (worker is IFanWorker fanWorker) fanWorker.DutyCycle = fanMessage.DutyCycle;
                     }
-                    else //Update the display
+                    else if (receivedMessage?.Status == ServiceStatus.None) //read current display status
                     {
-                        UpdateDisplay(receivedMessage!);
+                        receivedMessage.Status = _sharedMemoryService.Read(receivedMessage.MemoryByte);
+                    }
+                    else
+                    {
+                        UpdateServiceStatus(receivedMessage!);
                     }
                 }
 
@@ -60,7 +72,7 @@ namespace Shield.Display.Services
             }
         }
 
-        private IpcMessage? ReceiveMessage(NetworkStream stream)
+        private static IpcMessage? ReceiveMessage(NetworkStream stream)
         {
             var buffer = new byte[512];
             var messageLenght = stream.Read(buffer, 0, buffer.Length);
@@ -69,38 +81,19 @@ namespace Shield.Display.Services
             return IpcMessage.Deserialize(receivedMessage);
         }
 
-        private void UpdateDisplay(IpcMessage serviceMessage)
+        private void UpdateServiceStatus(IpcMessage serviceMessage)
         {
             try
             {
-                switch (serviceMessage?.Lcd)
+                var worker = GetWorkerService(serviceMessage.MemoryByte);
+
+                if (serviceMessage.ResetStatus)
                 {
-                    case Common.Domain.Lcd.Primary:
-                        if (serviceMessage.ResetStatus)
-                        {
-                            _primaryDisplayWorker.Welcome();
-                            _primaryDisplayWorker.UpdateTime();
-                            _primaryDisplayWorker.UpdateClimateInformation();
-                            _primaryDisplayWorker.ControlBacklightSchedule(Common.Domain.Lcd.Primary);
-                        }
-                        else
-                        {
-                            _primaryDisplayWorker.UpdateTime();
-                            _primaryDisplayWorker.UpdateClimateInformation();
-                            _primaryDisplayWorker.BacklightStatus = serviceMessage.Status;
-                        }
-                        break;
-                    case Common.Domain.Lcd.Secondary:
-                        if (serviceMessage.ResetStatus)
-                        {
-                            _secondaryDisplayWorker.BacklightStatus = DisplayBacklightStatus.OffByService;
-                            _secondaryDisplayWorker.ControlBacklightSchedule(Common.Domain.Lcd.Secondary);
-                        }
-                        else
-                        {
-                            _secondaryDisplayWorker.BacklightStatus = serviceMessage.Status;
-                        }
-                        break;
+                    worker.ResetStatus();
+                }
+                else
+                {
+                    worker.Update(serviceMessage.Status);
                 }
             }
             catch (Exception ex)
@@ -110,5 +103,17 @@ namespace Shield.Display.Services
                 serviceMessage.Exception = new ApplicationException(message, ex);
             }
         }
+
+        private IWorkerService GetWorkerService(SharedMemoryByte statusByte) => statusByte switch
+        {
+            SharedMemoryByte.PrimaryDisplayStatus => _primaryDisplayWorker,
+            SharedMemoryByte.SecondaryDisplayStatus => _secondaryDisplayWorker,
+            SharedMemoryByte.IntakeFanStatus => _intakeFanWorker,
+            SharedMemoryByte.IntakeFanDutyCycle => _intakeFanWorker,
+            SharedMemoryByte.ExhaustFanStatus => _exhaustFanWorker,
+            SharedMemoryByte.ExhaustFanDutyCycle => _exhaustFanWorker,
+            
+            _ => throw new NotImplementedException()
+        };
     }
 }

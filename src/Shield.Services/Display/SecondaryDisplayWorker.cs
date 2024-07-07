@@ -3,37 +3,45 @@ using Shield.Common.Domain;
 using Shield.Common.Interfaces;
 using Shield.Lcd;
 
-namespace Shield.Display
+namespace Shield.Services.Display
 {
     public class SecondaryDisplayWorker(ILogger<SecondaryDisplayWorker> logger,
         IDisplayService<Lcd16x2> displayService,
         ISharedMemoryService sharedMemoryService)
-        : DisplayWorkerBase<Lcd16x2>(logger, displayService, sharedMemoryService), ISecondaryDisplayWorker
+        : DisplayWorker<Lcd16x2>(logger, displayService, sharedMemoryService), ISecondaryDisplayWorker
     {
-        public override DisplayBacklightStatus BacklightStatus
+        public override ServiceStatus BacklightStatus
         {
             set
             {
                 base.BacklightStatus = value;
-                _sharedMemoryService.Write(value, Common.Domain.Lcd.Secondary);
+                _sharedMemoryService.Write(SharedMemoryByte.SecondaryDisplayStatus, value);
             }
         }
-        public void Execute()
+        public override void Execute()
         {
+            ExecuteAsync().Wait();
+        }
+
+        public override async Task ExecuteAsync(CancellationToken stoppingToken = default)
+    {
             string line1Text = "-- SHIELD --";
             string line2Text = "Media Server";
 
             int retries = 0;
 
-            BacklightStatus = DisplayBacklightStatus.OffByService;
+            await Task.Run(() => 
+            { 
+                BacklightStatus = ServiceStatus.OffByService; 
+            }, stoppingToken);
 
-            while (true) 
+            while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     using (var mutex = Util.StartMutex())
                     {
-                        ControlBacklightSchedule(Common.Domain.Lcd.Secondary);
+                        ControlBacklightSchedule(SharedMemoryByte.SecondaryDisplayStatus);
 
                         mutex.ReleaseMutex();
                     }
@@ -42,7 +50,7 @@ namespace Shield.Display
                     {
                         _displayService.Write(line1Text[^i..], new DisplayCursorPosition(0, 0));
                         _displayService.Write(line2Text[..i], new DisplayCursorPosition(16 - i, 1));
-                        
+
                         Task.Delay(300).Wait();
                     }
 
@@ -61,7 +69,7 @@ namespace Shield.Display
 
                     Task.Delay(300).Wait();
                 }
-                catch(OperationCanceledException)
+                catch (OperationCanceledException)
                 {
                     _logger.LogWarning("End of service!");
                 }
@@ -77,6 +85,12 @@ namespace Shield.Display
                     }
                 }
             }
+        }
+
+        public void ResetStatus()
+        {
+            BacklightStatus = ServiceStatus.OffByService;
+            ControlBacklightSchedule(SharedMemoryByte.SecondaryDisplayStatus);
         }
     }
 }

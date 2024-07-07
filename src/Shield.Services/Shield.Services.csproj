@@ -5,7 +5,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-Shield.Display-2cb91875-cb48-41e4-b1e5-c8db57f092ab</UserSecretsId>
-    <AssemblyName>shd</AssemblyName>
+    <AssemblyName>shieldservice</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>1701;1702;CA2254</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>1701;1702;CA2254</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shield.BME280\Shield.Bme280.csproj" />
+    <ProjectReference Include="..\Shield.Fan\Shield.Fan.csproj" />
     <ProjectReference Include="..\Shield.Lcd\Shield.Lcd.csproj" />
   </ItemGroup>
 </Project>

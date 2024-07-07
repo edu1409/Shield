@@ -4,32 +4,37 @@ using Shield.Common.Interfaces;
 using Shield.Lcd;
 using UnitsNet;
 
-namespace Shield.Display
+namespace Shield.Services.Display
 {
     public class PrimaryDisplayWorker(ILogger<PrimaryDisplayWorker> logger,
         IDisplayService<Lcd20x4> displayService,
         IClimateSensorService climateSensorService,
-        ISharedMemoryService sharedMemoryService) 
-        : DisplayWorkerBase<Lcd20x4>(logger, displayService, sharedMemoryService), IPrimaryDisplayWorker
+        ISharedMemoryService sharedMemoryService)
+        : DisplayWorker<Lcd20x4>(logger, displayService, sharedMemoryService), IPrimaryDisplayWorker
     {
         private readonly IClimateSensorService _climateSensorService = climateSensorService;
 
-        public override DisplayBacklightStatus BacklightStatus
+        public override ServiceStatus BacklightStatus
         {
             set
             {
                 base.BacklightStatus = value;
-                _sharedMemoryService.Write(value, Common.Domain.Lcd.Primary);
+                _sharedMemoryService.Write(SharedMemoryByte.PrimaryDisplayStatus, value);
             }
         }
 
-        public void Execute()
+        public override void Execute()
+        {
+            ExecuteAsync().Wait();
+        }
+
+        public override async Task ExecuteAsync(CancellationToken stoppingToken = default)
         {
             int climateWait = 0, retries = 0;
 
-            Welcome();
+            await Task.Run(() => Welcome(), stoppingToken);
 
-            while (true)
+            while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
@@ -45,12 +50,12 @@ namespace Shield.Display
                             climateWait = 0;
                         }
 
-                        ControlBacklightSchedule(Common.Domain.Lcd.Primary);
+                        ControlBacklightSchedule(SharedMemoryByte.PrimaryDisplayStatus);
 
                         mutex.ReleaseMutex();
                     }
 
-                    Task.Delay(TimeSpan.FromMinutes(1)).Wait();
+                    Task.Delay(TimeSpan.FromMinutes(1), stoppingToken).Wait(stoppingToken);
 
                     retries = 0;
                     climateWait++;
@@ -77,7 +82,7 @@ namespace Shield.Display
         {
             var message = Constants.DISPLAY_WELCOME;
 
-            BacklightStatus = DisplayBacklightStatus.OnByService;
+            BacklightStatus = ServiceStatus.OnByService;
             _cursor = new() { Left = 0, Top = 0 };
 
             for (int i = 0; i < message.Length; i++)
@@ -100,7 +105,7 @@ namespace Shield.Display
 
             _displayService.Clear();
 
-            BacklightStatus = DisplayBacklightStatus.OffByService;
+            BacklightStatus = ServiceStatus.OffByService;
         }
 
         public void UpdateTime()
@@ -122,7 +127,7 @@ namespace Shield.Display
             _cursor = new() { Left = 0, Top = 3 };
             _displayService.Write("".PadRight(20), _cursor);
             _cursor.Top = 2;
-            _displayService.Write("".PadRight(20), _cursor); 
+            _displayService.Write("".PadRight(20), _cursor);
 
             //await _displayService.SpinerAsync(new() { Left = 0, Top = 2 }, 1500);
 
@@ -135,6 +140,22 @@ namespace Shield.Display
                 : sensorReading.RelativeHumidity.Percent.ToString("#.##") + "%")}", _cursor);
 
             _logger.LogInformation(Constants.DISPLAY_CLIMATIC_INFO_UPDATED);
+        }
+
+        public void ResetStatus()
+        {
+            Welcome();
+            UpdateTime();
+            UpdateClimateInformation();
+            ControlBacklightSchedule(SharedMemoryByte.PrimaryDisplayStatus);
+        }
+
+        public override void Update(ServiceStatus newStatus)
+        {
+            UpdateTime();
+            UpdateClimateInformation();
+
+            base.Update(newStatus);
         }
     }
 }

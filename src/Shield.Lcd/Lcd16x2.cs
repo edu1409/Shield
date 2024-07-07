@@ -1,5 +1,4 @@
 ﻿using Iot.Device.CharacterLcd;
-using System.Device.Gpio;
 
 namespace Shield.Lcd
 {

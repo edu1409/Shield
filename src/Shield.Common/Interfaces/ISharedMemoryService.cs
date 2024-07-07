@@ -4,7 +4,7 @@ namespace Shield.Common.Interfaces
 {
     public interface ISharedMemoryService
     {
-        public void Write(DisplayBacklightStatus value, Lcd display);
-        DisplayBacklightStatus Read(Lcd display);
+        public void Write(SharedMemoryByte display, ServiceStatus value);
+        ServiceStatus Read(SharedMemoryByte display);
     }
 }

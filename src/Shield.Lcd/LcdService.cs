@@ -1,7 +1,6 @@
 ﻿using Iot.Device.CharacterLcd;
 using Shield.Common.Domain;
 using Shield.Common.Interfaces;
-using System.Device.Gpio;
 
 namespace Shield.Lcd
 {
@@ -15,12 +14,12 @@ namespace Shield.Lcd
             _display.BlinkingCursorVisible = false;
         }
 
-        public virtual bool BacklightOn
+        public bool BacklightOn
         {
             set => _display.BacklightOn = value;
         }
 
-        public virtual bool DisplayOn
+        public bool DisplayOn
         {
             set => _display.DisplayOn = value;
         }
