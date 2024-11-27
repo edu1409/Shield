@@ -2,27 +2,29 @@ using Shield.Common.Domain;
 using Shield.Services.Display;
 using Shield.Services.Fan;
 using Shield.Services.Ipc;
-using System.Device.Gpio;
+//using System.Device.Gpio;
 
 namespace Shield.Services
 {
     public sealed class Worker(ILogger<Worker> logger,
-        IPrimaryDisplayWorker primaryDisplayWorker,
-        ISecondaryDisplayWorker secondaryDisplayWorker,
+        //IPrimaryDisplayWorker primaryDisplayWorker,
+        //ISecondaryDisplayWorker secondaryDisplayWorker,
+        ISingleDisplayWorker singleDisplayWorker,
         IIntakeFanWorker fanInWorker,
         IExhaustFanWorker fanOutWorker,
         IIpcServiceServer ipcServiceServer) : BackgroundService
     {
         private readonly ILogger<Worker> _logger = logger;
-        private readonly IPrimaryDisplayWorker _primaryDisplayWorker = primaryDisplayWorker;
-        private readonly ISecondaryDisplayWorker _secondaryDisplayWorker = secondaryDisplayWorker;
+        //private readonly IPrimaryDisplayWorker _primaryDisplayWorker = primaryDisplayWorker;
+        //private readonly ISecondaryDisplayWorker _secondaryDisplayWorker = secondaryDisplayWorker;
+        private readonly ISingleDisplayWorker _singleDisplayWorker = singleDisplayWorker;
         private readonly IIntakeFanWorker _fanInWorker = fanInWorker;
         private readonly IExhaustFanWorker _fanOutWorker = fanOutWorker;
         private readonly IIpcServiceServer _ipcServiceServer = ipcServiceServer;
 
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            Led(true);
+            //Led(true);
 
             _ipcServiceServer.Execute();
 
@@ -31,17 +33,17 @@ namespace Shield.Services
 
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
-            Led(false);
+            //Led(false);
 
             await base.StopAsync(cancellationToken);
         }
 
-        public override void Dispose()
-        {
-            Led(false);
+        //public override void Dispose()
+        //{
+        //    Led(false);
             
-            base.Dispose();
-        }
+        //    base.Dispose();
+        //}
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -49,8 +51,9 @@ namespace Shield.Services
 
             var taskList = new List<Task>
             {
-                Task.Run(() => _primaryDisplayWorker.Execute(), stoppingToken),
-                Task.Run(() => _secondaryDisplayWorker.Execute(), stoppingToken),
+                //Task.Run(() => _primaryDisplayWorker.Execute(), stoppingToken),
+                //Task.Run(() => _secondaryDisplayWorker.Execute(), stoppingToken),
+                Task.Run(() => _singleDisplayWorker.Execute(), stoppingToken),
                 Task.Run(() => _fanInWorker.Execute(), stoppingToken),
                 Task.Run(() => _fanOutWorker.Execute(), stoppingToken)
             };
@@ -60,13 +63,13 @@ namespace Shield.Services
             return Task.CompletedTask;
         }
 
-        private static void Led(bool on)
-        {
-            int pin = 17;
-            using var controller = new GpioController();
-            controller.OpenPin(pin, PinMode.Output);
+        //private static void Led(bool on)
+        //{
+        //    int pin = 17;
+        //    using var controller = new GpioController();
+        //    controller.OpenPin(pin, PinMode.Output);
 
-            controller.Write(pin, on ? PinValue.High : PinValue.Low);
-        }
+        //    controller.Write(pin, on ? PinValue.High : PinValue.Low);
+        //}
     }
 }
