@@ -9,16 +9,18 @@ using System.Text;
 namespace Shield.Services.Ipc
 {
     public class IpcServiceServer(ILogger<IpcServiceServer> logger,
-        IPrimaryDisplayWorker primaryDisplayWorker,
-        ISecondaryDisplayWorker secondaryDisplayWorker,
+        //IPrimaryDisplayWorker primaryDisplayWorker,
+        //ISecondaryDisplayWorker secondaryDisplayWorker,
+        ISingleDisplayWorker singleDisplayWorker,
         IIntakeFanWorker intakeFanWorker,
         IExhaustFanWorker exhaustFanWorker,
         ISharedMemoryService sharedMemoryService) : IIpcServiceServer
     {
         private readonly TcpListener _listener = new(IPAddress.Any, Constants.IPC_PORT);
         private readonly ILogger<IpcServiceServer> _logger = logger;
-        private readonly IPrimaryDisplayWorker _primaryDisplayWorker = primaryDisplayWorker;
-        private readonly ISecondaryDisplayWorker _secondaryDisplayWorker = secondaryDisplayWorker;
+        //private readonly IPrimaryDisplayWorker _primaryDisplayWorker = primaryDisplayWorker;
+        //private readonly ISecondaryDisplayWorker _secondaryDisplayWorker = secondaryDisplayWorker;
+        private readonly ISingleDisplayWorker _singleDisplayWorker = singleDisplayWorker;
         private readonly IIntakeFanWorker _intakeFanWorker = intakeFanWorker;
         private readonly IExhaustFanWorker _exhaustFanWorker = exhaustFanWorker;
         private readonly ISharedMemoryService _sharedMemoryService = sharedMemoryService;
@@ -106,8 +108,9 @@ namespace Shield.Services.Ipc
 
         private IWorkerService GetWorkerService(SharedMemoryByte statusByte) => statusByte switch
         {
-            SharedMemoryByte.PrimaryDisplayStatus => _primaryDisplayWorker,
-            SharedMemoryByte.SecondaryDisplayStatus => _secondaryDisplayWorker,
+            //SharedMemoryByte.PrimaryDisplayStatus => _primaryDisplayWorker,
+            //SharedMemoryByte.SecondaryDisplayStatus => _secondaryDisplayWorker,
+            SharedMemoryByte.SingleDisplayStatus => _singleDisplayWorker,
             SharedMemoryByte.IntakeFanStatus => _intakeFanWorker,
             SharedMemoryByte.IntakeFanDutyCycle => _intakeFanWorker,
             SharedMemoryByte.ExhaustFanStatus => _exhaustFanWorker,

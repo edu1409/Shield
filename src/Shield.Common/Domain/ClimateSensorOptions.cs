@@ -1,4 +1,4 @@
-﻿namespace Shield.Common.Domain
-{
-    public class ClimateSensorOptions : I2cOptions { }
-}
+﻿//namespace Shield.Common.Domain
+//{
+//    public class ClimateSensorOptions : I2cOptions { }
+//}

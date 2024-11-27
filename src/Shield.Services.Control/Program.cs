@@ -27,11 +27,11 @@ namespace Shield.Services.Control
             exhaust = 1
         }
 
-        private enum Lcd
-        {
-            primary,
-            secondary
-        }
+        //private enum Lcd
+        //{
+        //    primary,
+        //    secondary
+        //}
 
         private enum State
         {
@@ -86,29 +86,40 @@ namespace Shield.Services.Control
                     }
                     else if (resource == Resource.lcd) //Display
                     {
-                        if (args.Length == 4)
+                        //if (args.Length == 4)
+                        if (args.Length == 3)
                         {
-                            if (Enum.TryParse(args[1], out Lcd lcd)) // primary | secondary
+                            //if (Enum.TryParse(args[1], out Lcd lcd)) // primary | secondary
+                            //{
+                            //if (args[2].Equals("backlight", StringComparison.Ordinal)) // backlight
+                            if (args[1].Equals("backlight", StringComparison.Ordinal)) // backlight
                             {
-                                if (args[2].Equals("backlight", StringComparison.Ordinal)) // backlight
+                                //if (Enum.TryParse(args[3], out State state)) // on | off | reset
+                                if (Enum.TryParse(args[2], out State state) && state != State.reset) // on | off
                                 {
-                                    if (Enum.TryParse(args[3], out State state)) // on | off | reset
-                                    {
-                                        var displayName = char.ToUpper(lcd.ToString()[0]) + lcd.ToString()[1..];
+                                    //var displayName = char.ToUpper(lcd.ToString()[0]) + lcd.ToString()[1..];
 
-                                        if (state == State.reset)
-                                        {
-                                            if (ResetLcdBacklightStatus(lcd)) resultMessage = string.Format(Constants.BACKLIGHT_BACK_AUTOMATIC, displayName);
-                                            else resultMessage = string.Format(Constants.BACKLIGHT_MANUAL_NOCHANGE, displayName);
-                                        }
-                                        else
-                                        {
-                                            if (ChangeLcdBacklightStatus(lcd, state)) resultMessage = string.Format(Constants.BACKLIGHT_MANUAL_CHANGE, displayName, state.ToString());
-                                            else resultMessage = string.Format(Constants.BACKLIGHT_MANUAL_NOCHANGE, displayName);
-                                        }
+                                    if (state == State.reset)
+                                    {
+                                        //if (ResetLcdBacklightStatus(lcd)) resultMessage = string.Format(Constants.LCD_BACKLIGHT_BACK_AUTOMATIC, displayName);
+                                        //else resultMessage = string.Format(Constants.LCD_BACKLIGHT_MANUAL_NOCHANGE, displayName);
+
+                                        if (ResetLcdBacklightStatus()) resultMessage = string.Format(Constants.LCD_BACKLIGHT_BACK_AUTOMATIC, String.Empty).Trim();
+                                        else resultMessage = string.Format(Constants.LCD_BACKLIGHT_MANUAL_NOCHANGE, String.Empty).Trim();
                                     }
+                                    else
+                                    {
+                                        //if (ChangeLcdBacklightStatus(lcd, state)) resultMessage = string.Format(Constants.LCD_BACKLIGHT_MANUAL_CHANGE, displayName, state.ToString());
+                                        //else resultMessage = string.Format(Constants.LCD_BACKLIGHT_MANUAL_NOCHANGE, displayName);
+
+                                        if (ChangeLcdBacklightStatus(state)) resultMessage = string.Format(Constants.LCD_BACKLIGHT_MANUAL_CHANGE, String.Empty, state.ToString()).Trim();
+                                        else resultMessage = string.Format(Constants.LCD_BACKLIGHT_MANUAL_NOCHANGE, String.Empty).Trim();
+                                    }
+
+                                    resultMessage = char.ToUpper(resultMessage[0]) + resultMessage[1..];
                                 }
                             }
+                            //}
                         }
                     }
                 }
@@ -126,8 +137,9 @@ namespace Shield.Services.Control
             message.Append("\n\r\tshield fan intake dutycycle 0..1                  Set intake fan duty cycle to a value between 0 and 1.");
             message.Append("\n\r\tshield fan exhaust on|off|reset                   Turn exaust fan on, off or return to automatic control.");
             message.Append("\n\r\tshield fan exhaust dutycycle 0..1                 Set exaust fan duty cycle to a value between 0 and 1.");
-            message.Append("\n\r\tshield lcd primary backlight on|off|reset         Turn primary display backlight on, off or return to automatic control.");
-            message.Append("\n\r\tshield lcd secondary backlight on|off|reset       Turn secondary display backlight on, off or return to automatic control.");
+            //message.Append("\n\r\tshield lcd primary backlight on|off|reset         Turn primary display backlight on, off or return to automatic control.");
+            //message.Append("\n\r\tshield lcd secondary backlight on|off|reset       Turn secondary display backlight on, off or return to automatic control.");
+            message.Append("\n\r\tshield lcd backlight on|off                       Turn display backlight on or off.");
             message.Append("\n\r\tshield help                                       Show the available commands.");
 
             return message.ToString();
@@ -136,9 +148,11 @@ namespace Shield.Services.Control
         /// <summary>
         /// Check if user's command is changing the current backlight status or not
         /// </summary>
-        private static bool ChangeLcdBacklightStatus(Lcd lcd, State state)
+        //private static bool ChangeLcdBacklightStatus(Lcd lcd, State state)
+        private static bool ChangeLcdBacklightStatus(State state)
         {
-            var memoryStatusByte = lcd == Lcd.primary ? SharedMemoryByte.PrimaryDisplayStatus : SharedMemoryByte.SecondaryDisplayStatus;
+            //var memoryStatusByte = lcd == Lcd.primary ? SharedMemoryByte.PrimaryDisplayStatus : SharedMemoryByte.SecondaryDisplayStatus;
+            var memoryStatusByte = SharedMemoryByte.SingleDisplayStatus;
 
             return ChangeStatus(memoryStatusByte, state);
         }
@@ -146,9 +160,11 @@ namespace Shield.Services.Control
         /// <summary>
         /// Returns display backlight control to automatic.
         /// </summary>
-        private static bool ResetLcdBacklightStatus(Lcd lcd)
+        //private static bool ResetLcdBacklightStatus(Lcd lcd)
+        private static bool ResetLcdBacklightStatus()
         {
-            var memoryStatusByte = lcd == Lcd.primary ? SharedMemoryByte.PrimaryDisplayStatus : SharedMemoryByte.SecondaryDisplayStatus;
+            //var memoryStatusByte = lcd == Lcd.primary ? SharedMemoryByte.PrimaryDisplayStatus : SharedMemoryByte.SecondaryDisplayStatus;
+            var memoryStatusByte = SharedMemoryByte.SingleDisplayStatus;
 
             return ResetStatus(memoryStatusByte);
         }

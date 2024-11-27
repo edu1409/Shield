@@ -1,4 +1,4 @@
-﻿namespace Shield.Services.Display
-{
-    public interface ISecondaryDisplayWorker : IDisplayWorker { }
-}
+﻿//namespace Shield.Services.Display
+//{
+//    public interface ISecondaryDisplayWorker : IDisplayWorker { }
+//}

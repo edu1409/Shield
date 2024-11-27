@@ -2,10 +2,10 @@
 {
     public enum CpuTemperatureThreshold
     {
-        None = 40,      //  0%
-        Low = 50,       // 25%
-        Medium = 60,    // 50%
-        High = 70,      // 75%
-        Highest = 71    //100%
+        None = 60,      //  0%
+        Low = 70,       // 25%
+        Medium = 80,    // 50%
+        High = 90,      // 75%
+        Highest = 95    //100%
     }
 }

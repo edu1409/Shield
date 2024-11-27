@@ -1,9 +1,9 @@
-﻿using Shield.Common.Domain;
+﻿//using Shield.Common.Domain;
 
-namespace Shield.Common.Interfaces
-{
-    public interface IClimateSensorService
-    {
-        Task<ClimateSensorReading> ReadAsync(CancellationToken cancellationToken = default);
-    }
-}
+//namespace Shield.Common.Interfaces
+//{
+//    public interface IClimateSensorService
+//    {
+//        Task<ClimateSensorReading> ReadAsync(CancellationToken cancellationToken = default);
+//    }
+//}
